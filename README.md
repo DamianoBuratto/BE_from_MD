@@ -1,4 +1,4 @@
-# BE_from_MD
+# BindingEenergy from MD
 
 Here we discuss how to compute the binding energy of a ligand-receptor complex using computational methods. This applies to protein-protein or small molecule-protein complexes. I will give you a practical example using an antibody-antigen complex system.
 
@@ -17,7 +17,17 @@ The starting point is a configuration of the complex well equilibrated and in a 
   + MMPBSA_LinearPB.in 
 
 ### Suggested procedure:
+The following is a general procedure used in my custom software ABiSS. 
 
+The first step is to generate the topology of your protein given a ForceField. Generally, pdb2gmx Gromacs tool will take care of generating the topology, but you must double-check its work. In particular, you need to confirm the formation of S-S bonds between CYS, the protonation state of the HIS (you generally want to keep them at $N\epsilon$ protonation state), and the presence of C-terminal and N-terminal at the start/end of every protein chain.
+
+The second step is to put the system in a physiological environment with Periodic Boundary Conditions (PBC). This means:
+1. Create a box and move your system to the center of it
+2. add water to the system
+3. add ions to the system (generally a mix of K or Na and Cl) to reach a physiological concentration (generally 150nM)
+
+
+To have a good estimation of binding energy with its standard deviation it is preferable to run multiple simulations in parallel. 
 
 ### Example:
 
