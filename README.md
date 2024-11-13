@@ -1,44 +1,73 @@
-# BindingEenergy from MD
+# Binding Energy from MD
 
-Here we discuss how to compute the binding energy of a ligand-receptor complex using computational methods. This applies to protein-protein or small molecule-protein complexes. I will give you a practical example using an antibody-antigen complex system.
+This tutorial explains how to compute the binding energy of a ligand-receptor assembly using computational methods. The approach applies to both protein-protein and small molecule-protein assemblies. A practical example is provided using an antibody-antigen system.
 
-The starting point is a configuration of the complex well equilibrated and in a stable minimum. The idea is to sample configurations of this minima using Molecular Dynamics (MD) and use the frames to obtain a good approximation of the binding energy with a standard deviation using gmx_MMPBSA software. I will show the implementation of ‘single trajectory (linear) MMPBSA’ method using gmx_MMPBSA . The software used for MD is Gromacs.
+The starting point is a well-equilibrated configuration of the assembly at a stable energy minimum. The aim is to sample configurations from this minimum using Molecular Dynamics (MD) simulations and calculate an accurate approximation of the binding energy, including its standard deviation, using the **gmx_MMPBSA** tool. This tutorial demonstrates the implementation of the "single trajectory (linear) MMPBSA" method with **gmx_MMPBSA**. MD simulations will be conducted using **GROMACS**.
 
-### Input files:
-- **PDB_FILE**: complex file in a .pdb format where chains id are specified and the TER keyword is positioned at the end of every protein
-  + e.g. abN48_wt_example.pdb
-- __MDP_FILEs__: .mdp files with the parameters used during MD. There will be one mdp file for every MD step. Generally, a good MD protocol requires Energy Minimization (EM), NVT and NPT before production runs. To improve the configuration sampling you can (optionally) add a Simulated Annealing MD before production MD.
-  + em_amber.mdp
-  + NVT_amber.mdp
-  + NPT_amber.mdp
-  + SAMD_amber.mdp
-  + PROD_amber.mdp 
-- **IN_FILE**: .in is the input file used by gmx_MMPBSA. The parameters in the example input file are specific for linear PB and amber forcefield in protein-protein interaction.
-  + MMPBSA_LinearPB.in 
+---
 
-### Suggested procedure:
-The following is a general procedure used in my custom software ABiSS. 
+### Starting Files
 
-The first step is to generate the topology of your protein given a ForceField. Generally, pdb2gmx Gromacs tool will take care of generating the topology, but you must double-check its work. In particular, you need to confirm the formation of S-S bonds between CYS, the protonation state of the HIS (you generally want to keep them at $N\epsilon$ protonation state), and the presence of C-terminal and N-terminal at the start/end of every protein chain.
+You can find these files in the repository.
 
-The second step is to put the system in a physiological environment with Periodic Boundary Conditions (PBC). This means:
-1. Create a box and move your system to the center of it
-2. add water to the system
-3. add ions to the system (generally a mix of K or Na and Cl) to reach a physiological concentration (generally 150nM)
+- **PDB_FILE**: The assembly file in `.pdb` format with chain IDs specified, and the `TER` keyword positioned at the end of every protein chain.  
+  Example: `abN48_wt_example.pdb`
+  
+- **MDP_FILEs**: `.mdp` files containing parameters for the MD simulations. Typically, an MD protocol includes steps for Energy Minimization (EM), NVT equilibration, and NPT equilibration before production runs. Optionally, Simulated Annealing MD (SAMD) can improve sampling before production MD.  
+  Examples:
+  - `em_amber.mdp`
+  - `NVT_amber.mdp`
+  - `NPT_amber.mdp`
+  - `SAMD_amber.mdp`
+  - `PROD_amber.mdp`
 
-Once you generate your system, you need to run energy minimization and equilibrate it (EM, NVT, NPT). The equilibration process (NVT and NPT) is generally very fast (~100ps) and is needed to have a system starting at the correct Temperature and Pressure.
+- **IN_FILE**: Input file (`.in`) for **gmx_MMPBSA**. The example parameters provided are specific for linear PB calculations and the Amber force field in protein-protein interactions.  
+  Example: `MMPBSA_LinearPB.in`
 
-Using your equilibrated system, you can run SAMD and Production simulations. To have a good estimation of binding energy with its standard deviation it is preferable to run multiple simulations in parallel. For this reason is suggested to run multiple SAMD+Production simulations in parallel. SAMD is generally fast (~1ns) while Production can be a bit longer (~4ns). The last part of the Production simulation (~2ns) for every run will be used to compute the Binding Energy. The first part of the simulation is usually discarded because the system will still require a bit of time to reach an optimal equilibrium (you can check that with the RMSD).
+---
 
-At this point, you need to manipulate your trajectory (.xtc file), topology (.top and .itp files), and tpr of the production run (.tpr file) to generate the input files for gmx_MMPBSA. Generally, you want to feed to gmx_MMPBSA a very clean version of your system. You will need multiple input files:
-- **trajectory .xtc**: starting from the production .xtc trajectory, you need to keep only the protein (remove water and ions) and remove the PBC.
-- **topology .itp**: starting from the topology of your system, you need to keep only the protein. All the .itp files must follow the topology if you change the folder for the calculations.
-- **tpr file**: starting from the .tpr file of the production run, you need to generate a new tpr where you have only the protein.
-- **gro file**: starting from the .tpr of the production run or final gro of NPT run, you need to generate a new gro file with only the protein.
-- **pdb file**: starting from the .tpr of the production run or final gro of NPT run, you need to generate a new pdb file with only the protein. You also need to reset the ChainID information in this file.
-- **index file**: starting from the gro or pdb file you just generated, you need to build an index file containing two groups that define your ligand and your receptor. The number of these two groups has to be specified in the input of gmx_MMPBSA
+### Suggested Procedure
 
-Once all your files are ready, you can run gmx_MMPBSA, the output can be analyzed with their gmx_MMPBSA_ana tool or you can specify a .csv file as output that can be used for custom analysis.
+The following is a general workflow, inspired by the custom software **ABiSS**.
+
+1. **Generate Protein Topology**  
+   Use the `pdb2gmx` tool in **GROMACS** to generate the topology for your system. Carefully review the output to ensure:
+   - Proper formation of disulfide (S-S) bonds between CYS residues.
+   - Correct protonation states of HIS residues (typically at $N\epsilon$).
+   - Presence of N-terminal and C-terminal groups at the start and end of protein chains.
+
+2. **Prepare the System**  
+   Set up a physiological environment with Periodic Boundary Conditions (PBC):  
+   - Create a simulation box and center the system within it.  
+   - Add water molecules to the system.  
+   - Add ions (e.g., Na+, K+, Cl−) to achieve physiological ionic strength (~150 mM).
+
+3. **Equilibration**  
+   - Perform Energy Minimization (EM).  
+   - Equilibrate the system using NVT and NPT ensembles (~100 ps each) to achieve the desired temperature and pressure.  
+
+4. **Production MD**  
+   - Run Simulated Annealing MD (SAMD) and production simulations. Multiple independent simulations are recommended for robust statistics. This is generally preferable compared to a single-long simulation. 
+   - Typical durations:
+     - SAMD: ~1 ns  
+     - Production: ~4 ns (use the last 2 ns for energy calculations; discard the initial portion to ensure proper equilibration).  
+   - Check system stability with RMSD analysis.
+
+5. **Generate Input for gmx_MMPBSA**  
+   Process the trajectory and topology files to prepare clean inputs:  
+   - **Trajectory (`.xtc`)**: Starting from the production-run .xtc, extract only the protein, remove water and ions, and unwrap PBC.  
+   - **Topology (`.top`, `.itp`)**: Keep only the protein and ensure all dependent files are correctly linked.  
+   - **TPR file (`.tpr`)**: Starting from the production-run .tpr, create a new `.tpr` file containing only the protein.  
+   - **GRO file (`.gro`)**: Generate a protein-only `.gro` file from the production `.tpr` or NPT-equilibrated final frame.  
+   - **PDB file (`.pdb`)**: Create a protein-only `.pdb` file with Chain IDs reset.  
+   - **Index file (`.ndx`)**: Generate an index file starting from the gro or pdb you just built. Define two groups for the ligand and receptor. The group IDs must match the input for **gmx_MMPBSA**.
+
+6. **Run gmx_MMPBSA**  
+   Execute **gmx_MMPBSA** with the prepared input files. The results can be analyzed using the `gmx_MMPBSA_ana` tool, or exported as `.csv` for custom analyses.
+
+---
+
+This guide should help you compute binding energies effectively and reproducibly. Feel free to adapt the process to suit specific systems or objectives.
 
 ### Example:
 
