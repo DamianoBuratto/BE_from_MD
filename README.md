@@ -30,7 +30,7 @@ You can find these files in the repository.
 
 The following is a general workflow, inspired by the custom software **ABiSS**.
 
-0. **Software installation**
+0. **Software installation**  
    We are going to use the **GROMACS** software tools to manipulate our system and run MD, **VMD** to visualize and manipulate the system, and **gmx_MMPBSA** to compute the Binding Energy. 
 
 2. **Generate Protein Topology**  
